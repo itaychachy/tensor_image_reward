@@ -9,7 +9,6 @@
 import os
 import torch
 import json
-from tqdm import tqdm
 import ImageReward as RM
 import argparse
 

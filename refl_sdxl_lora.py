@@ -1,5 +1,3 @@
-import os
-
 from ImageReward import ReFL_SDXL_LoRA
 
 if __name__ == "__main__":

@@ -69,13 +69,13 @@ class MLP(nn.Module):
 
 
 class ImageReward(nn.Module):
-    def __init__(self, med_config, device='cpu'):
+    def __init__(self, med_config, device='cuda'):
         super().__init__()
         self.device = device
         
-        self.blip = BLIP_Pretrain(image_size=224, vit='large', med_config=med_config)
+        self.blip = BLIP_Pretrain(image_size=224, vit='large', med_config=med_config).to(self.device)
         self.preprocess = _transform(224)
-        self.mlp = MLP(768)
+        self.mlp = MLP(768).to(self.device)
         
         self.mean = 0.16717362830052426
         self.std = 1.0333394966054072
@@ -136,21 +136,26 @@ class ImageReward(nn.Module):
         return rewards.detach().cpu().numpy().item()
 
 
-    def inference_rank(self, prompt, generations_list):
-        
+    def inference_rank(self, prompt, generations):
+
         text_input = self.blip.tokenizer(prompt, padding='max_length', truncation=True, max_length=35, return_tensors="pt").to(self.device)
         
         txt_set = []
-        for generation in generations_list:
+        for generation in generations:
             # image encode
             if isinstance(generation, Image.Image):
                 pil_image = generation
+                image = self.preprocess(pil_image).unsqueeze(0).to(self.device)
             elif isinstance(generation, str):
                 if os.path.isfile(generation):
                     pil_image = Image.open(generation)
+                image = self.preprocess(pil_image).unsqueeze(0).to(self.device)
+            elif isinstance(generation, torch.Tensor):
+                image = generation.unsqueeze(0).to(self.device)
             else:
                 raise TypeError(r'This image parameter type has not been supportted yet. Please pass PIL.Image or file path str.')
-            image = self.preprocess(pil_image).unsqueeze(0).to(self.device)
+
+            print(f'-------image shape: {image.shape}-------')
             image_embeds = self.blip.visual_encoder(image)
             
             # text encode cross attention with image
