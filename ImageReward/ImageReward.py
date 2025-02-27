@@ -155,7 +155,6 @@ class ImageReward(nn.Module):
             else:
                 raise TypeError(r'This image parameter type has not been supportted yet. Please pass PIL.Image or file path str.')
 
-            print(f'-------image shape: {image.shape}-------')
             image_embeds = self.blip.visual_encoder(image)
             
             # text encode cross attention with image
