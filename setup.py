@@ -4,16 +4,16 @@ import pkg_resources
 from pathlib import Path
 
 long_description = (Path(__file__).parent / "README.md").read_text()
-DESCRIPTION = 'ImageReward'
+DESCRIPTION = 'TensorImageReward'
 
 # 配置
 setup(
-        name="image-reward", 
-        py_modules = ["ImageReward"],
+        name="TensorImageReward",
+        py_modules = ["TensorImageReward"],
         version="1.5",
         author="Jiazheng Xu, et al.",
         author_email="<xjz22@mails.tsinghua.edu.cn>",
-        url="https://github.com/THUDM/ImageReward",
+        url="https://github.com/itaychachy/tensor_image_reward.git",
         description=DESCRIPTION,
         long_description=long_description,
         long_description_content_type='text/markdown',
