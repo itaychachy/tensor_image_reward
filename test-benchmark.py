@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-import ImageReward as RM
+import TensorImageReward as RM
 
 
 def test_benchmark(args):

@@ -42,7 +42,7 @@ from diffusers.utils import check_min_version
 from diffusers.utils.import_utils import is_xformers_available
 from diffusers.utils.torch_utils import is_compiled_module
 
-import ImageReward as RM
+import TensorImageReward as RM
 
 try:
     from torchvision.transforms import InterpolationMode
@@ -61,8 +61,8 @@ def import_model_class_from_model_name_or_path(
     pretrained_model_name_or_path: str, revision: str, cache_dir: str, subfolder: str = "text_encoder"
 ):
     text_encoder_config = PretrainedConfig.from_pretrained(
-        pretrained_model_name_or_path, 
-        subfolder=subfolder, 
+        pretrained_model_name_or_path,
+        subfolder=subfolder,
         revision=revision,
         cache_dir=cache_dir,
     )
@@ -353,7 +353,7 @@ def encode_prompt_rm(batch, caption_column, reward_model):
         "rm_attention_mask": text_inputs.attention_mask,
     }
 
-# Adapted from pipelines.StableDiffusionXLPipeline.encode_prompt    
+# Adapted from pipelines.StableDiffusionXLPipeline.encode_prompt
 def encode_prompt(batch, text_encoders, tokenizers, caption_column, is_train=True):
     prompt_embeds_list = []
     prompt_batch = batch[caption_column]
@@ -410,7 +410,7 @@ class Trainer(object):
     def __init__(self, pretrained_model_name_or_path, train_data_dir, args) -> None:
 
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
-        
+
         logging_dir = os.path.join(args.output_dir, args.logging_dir)
 
         accelerator_project_config = ProjectConfiguration(total_limit=args.checkpoints_total_limit)
@@ -473,24 +473,24 @@ class Trainer(object):
         )
 
         # Load scheduler and models
-        self.noise_scheduler = DDPMScheduler.from_pretrained(self.pretrained_model_name_or_path, 
+        self.noise_scheduler = DDPMScheduler.from_pretrained(self.pretrained_model_name_or_path,
                                                              subfolder="scheduler",
                                                              cache_dir=args.cache_dir
         )
 
         # Check for terminal SNR in combination with SNR Gamma
-        text_encoder_one = text_encoder_cls_one.from_pretrained(self.pretrained_model_name_or_path, 
-                                                                subfolder="text_encoder", 
+        text_encoder_one = text_encoder_cls_one.from_pretrained(self.pretrained_model_name_or_path,
+                                                                subfolder="text_encoder",
                                                                 revision=args.revision,
                                                                 cache_dir=args.cache_dir
         )
 
-        text_encoder_two = text_encoder_cls_two.from_pretrained(self.pretrained_model_name_or_path, 
-                                                                subfolder="text_encoder_2", 
+        text_encoder_two = text_encoder_cls_two.from_pretrained(self.pretrained_model_name_or_path,
+                                                                subfolder="text_encoder_2",
                                                                 revision=args.revision,
                                                                 cache_dir=args.cache_dir
         )
-            
+
         self.vae = AutoencoderKL.from_pretrained(
             self.pretrained_model_name_or_path,
             subfolder="vae",
@@ -498,8 +498,8 @@ class Trainer(object):
             cache_dir=args.cache_dir
         )
         self.unet = UNet2DConditionModel.from_pretrained(
-            self.pretrained_model_name_or_path, 
-            subfolder="unet", 
+            self.pretrained_model_name_or_path,
+            subfolder="unet",
             revision=args.revision,
             cache_dir=args.cache_dir
         )
@@ -531,8 +531,8 @@ class Trainer(object):
         # Create EMA for the self.unet.
         if args.use_ema:
             self.ema_unet = UNet2DConditionModel.from_pretrained(
-                self.pretrained_model_name_or_path, 
-                subfolder="unet", 
+                self.pretrained_model_name_or_path,
+                subfolder="unet",
                 revision=args.revision,
                 cache_dir=args.cache_dir,
             )
@@ -578,11 +578,11 @@ class Trainer(object):
                     model = models.pop()
 
                     # load diffusers style into model
-                    load_model = UNet2DConditionModel.from_pretrained(input_dir, 
+                    load_model = UNet2DConditionModel.from_pretrained(input_dir,
                                                                       subfolder="unet",
                                                                       cache_dir=args.cache_dir
                     )
-                    
+
                     model.register_to_config(**load_model.config)
 
                     model.load_state_dict(load_model.state_dict())
@@ -707,7 +707,7 @@ class Trainer(object):
             examples["original_sizes"] = original_sizes
             examples["crop_top_lefts"] = crop_top_lefts
             examples["pixel_values"] = all_images
- 
+
             return examples
 
         with self.accelerator.main_process_first():
@@ -728,11 +728,11 @@ class Trainer(object):
         )
         compute_vae_encodings_fn = functools.partial(compute_vae_encodings, vae=self.vae)
         compute_rm_encodings_fn = functools.partial(
-            encode_prompt_rm, 
-            caption_column=args.caption_column, 
+            encode_prompt_rm,
+            caption_column=args.caption_column,
             reward_model=self.reward_model,
         )
-        
+
         with self.accelerator.main_process_first():
             from datasets.fingerprint import Hasher
 
@@ -742,8 +742,8 @@ class Trainer(object):
             new_fingerprint_for_vae = Hasher.hash(pretrained_model_name_or_path)
             new_fingerprint_for_rm = Hasher.hash(args.image_reward_version)
             train_dataset_with_embeddings = train_dataset.map(
-                compute_embeddings_fn, 
-                batched=True, 
+                compute_embeddings_fn,
+                batched=True,
                 batch_size=args.mapping_batch_size,
                 new_fingerprint=new_fingerprint,
             )
@@ -760,7 +760,7 @@ class Trainer(object):
                 new_fingerprint=new_fingerprint_for_rm,
             )
             self.precomputed_dataset = concatenate_datasets(
-                [train_dataset_with_embeddings, 
+                [train_dataset_with_embeddings,
                  train_dataset_with_vae.remove_columns(["image", "text", "id"]),
                  train_dataset_with_rm.remove_columns(["image", "text", "id"])], axis=1
             )
@@ -777,7 +777,7 @@ class Trainer(object):
             crop_top_lefts = [example["crop_top_lefts"] for example in examples]
             prompt_embeds = torch.stack([torch.tensor(example["prompt_embeds"]) for example in examples])
             pooled_prompt_embeds = torch.stack([torch.tensor(example["pooled_prompt_embeds"]) for example in examples])
-            
+
             rm_input_ids = torch.stack([torch.tensor(example["rm_input_ids"]) for example in examples])
             rm_attention_mask = torch.stack([torch.tensor(example["rm_attention_mask"]) for example in examples])
             rm_input_ids = rm_input_ids.view(-1, rm_input_ids.shape[-1])
@@ -845,7 +845,7 @@ class Trainer(object):
         add_time_ids = torch.tensor([add_time_ids])
         add_time_ids = add_time_ids.to(self.accelerator.device, dtype=self.weight_dtype)
         return add_time_ids
-        
+
     # Function for unwrapping if torch.compile() was used in accelerate.
     def _unwrap_model(self, model):
         model = self.accelerator.unwrap_model(model)
@@ -905,9 +905,9 @@ class Trainer(object):
         self.optimizer.step()
         self.lr_scheduler.step()
         self.optimizer.zero_grad()
-        
+
         return loss
-    
+
     def _reward_loss(self, args, batch) -> torch.Tensor:
         add_time_ids = torch.cat(
             [self._compute_time_ids(args.resolution, s, c) for s, c in zip(batch["original_sizes"], batch["crop_top_lefts"])]
@@ -920,7 +920,7 @@ class Trainer(object):
         unet_added_conditions.update({"text_embeds": pooled_prompt_embeds})
 
         latents = torch.randn((args.train_batch_size, 4, 64, 64), device=self.accelerator.device)
-        
+
         timesteps = self.noise_scheduler.timesteps
 
         mid_timestep = random.randint(30, 39)
@@ -936,7 +936,7 @@ class Trainer(object):
                     added_cond_kwargs=unet_added_conditions,
                 ).sample
                 latents = self.noise_scheduler.step(noise_pred, t, latents).prev_sample
-        
+
         latent_model_input = latents
         latent_model_input = self.noise_scheduler.scale_model_input(latent_model_input, timesteps[mid_timestep])
         noise_pred = self.unet(
@@ -946,7 +946,7 @@ class Trainer(object):
             added_cond_kwargs=unet_added_conditions,
         ).sample
         pred_original_sample = self.noise_scheduler.step(noise_pred, timesteps[mid_timestep], latents).pred_original_sample.to(self.weight_dtype)
-        
+
         pred_original_sample = 1 / self.vae.config.scaling_factor * pred_original_sample
         image = self.vae.decode(pred_original_sample.to(self.weight_dtype)).sample
         image = (image / 2 + 0.5).clamp(0, 1)
@@ -958,10 +958,10 @@ class Trainer(object):
                 transforms.CenterCrop(224),
                 transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
             ])
-        
+
         rm_preprocess = _transform()
         image = rm_preprocess(image).to(self.accelerator.device)
-        
+
         rewards = self.reward_model.score_gard(batch["rm_input_ids"], batch["rm_attention_mask"], image)
         loss = F.relu(-rewards+2)
         loss = loss.mean() * args.grad_scale
@@ -975,7 +975,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
 
         return loss
-    
+
 
     def train(self, args):
         # Train!
@@ -990,7 +990,7 @@ class Trainer(object):
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
         logger.info(f" Apply pre-trained loss? {args.apply_pre_loss}")
         logger.info(f" Apply reward loss? {args.apply_reward_loss}")
-        
+
         global_step = 0
         first_epoch = 0
 
@@ -1026,7 +1026,7 @@ class Trainer(object):
             # Only show the progress bar once on each machine.
             disable=not self.accelerator.is_local_main_process,
         )
-       
+
         # Record the information of best checkpoint
         if self.accelerator.is_main_process:
             best_output_dir = path
@@ -1044,10 +1044,10 @@ class Trainer(object):
 
             # Reward loss among all processes
             reward_avg_loss = 0.0
-            
+
             # Total loss among all processes
             train_loss = 0.0
-            
+
             for step, batch in enumerate(self.train_dataloader):
                 logs = {}
 
@@ -1056,26 +1056,26 @@ class Trainer(object):
                     if step % args.gradient_accumulation_steps == 0:
                         progress_bar.update(1)
                     continue
-                
+
                 # Pre-train loss (NOTE: It uses same dataset as reward loss. Fix it later)
                 if args.apply_pre_loss:
                     # Switch noise scheduler timesteps to original setup
                     self.noise_scheduler.reset_timesteps()
-                    
+
                     with self.accelerator.accumulate(self.unet):
                         # Sample noise that we'll add to the latents
                         pre_loss = self._pretrain_loss(args, batch)
                         loss += pre_loss.detach().item()
-                        
+
                         # Gather the losses across all processes for logging (if we use distributed training).
                         pre_avg_loss = self.accelerator.gather(pre_loss.repeat(args.train_batch_size)).mean()
                         train_loss += pre_avg_loss.item() / args.gradient_accumulation_steps
-                                                
+
                     logs.update({"pre_loss": pre_loss.detach().item()})
-                        
+
                 # Reward loss
                 if args.apply_reward_loss:
-                    self.noise_scheduler.set_timesteps(num_inference_steps=40, 
+                    self.noise_scheduler.set_timesteps(num_inference_steps=40,
                                                         device=self.accelerator.device)
 
                     with self.accelerator.accumulate(self.unet):
@@ -1094,8 +1094,8 @@ class Trainer(object):
                         self.ema_unet.step(self.unet.parameters())
                     progress_bar.update(1)
                     global_step += 1
-                    self.accelerator.log({"train_loss": train_loss, 
-                                          "pre_loss": pre_avg_loss, 
+                    self.accelerator.log({"train_loss": train_loss,
+                                          "pre_loss": pre_avg_loss,
                                           "reward_loss": reward_avg_loss}, step=global_step)
 
                     # Store the model weights
@@ -1105,23 +1105,23 @@ class Trainer(object):
 
                             if args.save_only_one_ckpt:
                                 if train_loss < best_train_loss:
-                                    
+
                                     best_train_loss = train_loss
                                     logger.info(f"Best loss changed to {best_train_loss}")
-                                    
-                                    # Delete previous best checkpoint 
+
+                                    # Delete previous best checkpoint
                                     if best_output_dir is not None:
                                         shutil.rmtree(best_output_dir)
                                         logger.info(f"Removed previous state at {best_output_dir}")
-                                    
+
                                     best_output_dir = save_path
 
-                                    self.accelerator.save_state(save_path)                            
+                                    self.accelerator.save_state(save_path)
                                     logger.info(f"Saved state to {save_path}")
                             else:
-                                self.accelerator.save_state(save_path)                            
+                                self.accelerator.save_state(save_path)
                                 logger.info(f"Saved state to {save_path}")
-                    
+
                     train_loss = 0.0
 
                 logs.update({"step_loss": loss, "lr": self.lr_scheduler.get_last_lr()[0]})

@@ -1,1 +1,1 @@
-from .ImageReward import *
+from .TensorImageReward import *

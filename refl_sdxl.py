@@ -1,4 +1,4 @@
-from ImageReward import ReFL_SDXL
+from TensorImageReward import ReFL_SDXL
 
 if __name__ == "__main__":
     args = ReFL_SDXL.parse_args()

@@ -1,6 +1,6 @@
 import os
 import torch
-import ImageReward as RM
+import TensorImageReward as RM
 
 if __name__ == "__main__":
     prompt = "a painting of an ocean with clouds and birds, day time, low depth field effect"

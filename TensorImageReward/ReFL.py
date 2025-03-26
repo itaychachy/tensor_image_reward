@@ -33,7 +33,7 @@ from transformers import CLIPTextModel, CLIPTokenizer
 
 import io
 from PIL import Image
-import ImageReward as RM
+import TensorImageReward as RM
 
 from torchvision.transforms import Compose, Resize, CenterCrop, Normalize
 try:
@@ -342,12 +342,12 @@ def parse_args():
 
 
 class Trainer(object):
-    
+
     def __init__(self, pretrained_model_name_or_path, train_data_dir, args):
-            
+
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         self.train_data_dir = train_data_dir
-            
+
         # Sanity checks
         if args.dataset_name is None and self.train_data_dir is None:
             raise ValueError("Need either a dataset name or a training folder.")
@@ -652,9 +652,9 @@ class Trainer(object):
             tracker_config.pop("validation_prompts")
             self.accelerator.init_trackers(args.tracker_project_name, tracker_config)
 
-    
+
     def train(self, args):
-            
+
         # Train!
         total_batch_size = args.train_batch_size * self.accelerator.num_processes * args.gradient_accumulation_steps
 
@@ -710,7 +710,7 @@ class Trainer(object):
                 with self.accelerator.accumulate(self.unet):
                     encoder_hidden_states = self.text_encoder(batch["input_ids"])[0]
                     latents = torch.randn((args.train_batch_size, 4, 64, 64), device=self.accelerator.device)
-                    
+
                     self.noise_scheduler.set_timesteps(40, device=self.accelerator.device)
                     timesteps = self.noise_scheduler.timesteps
 
@@ -726,7 +726,7 @@ class Trainer(object):
                                 encoder_hidden_states=encoder_hidden_states,
                             ).sample
                             latents = self.noise_scheduler.step(noise_pred, t, latents).prev_sample
-                    
+
                     latent_model_input = latents
                     latent_model_input = self.noise_scheduler.scale_model_input(latent_model_input, timesteps[mid_timestep])
                     noise_pred = self.unet(
@@ -735,7 +735,7 @@ class Trainer(object):
                         encoder_hidden_states=encoder_hidden_states,
                     ).sample
                     pred_original_sample = self.noise_scheduler.step(noise_pred, timesteps[mid_timestep], latents).pred_original_sample.to(self.weight_dtype)
-                    
+
                     pred_original_sample = 1 / self.vae.config.scaling_factor * pred_original_sample
                     image = self.vae.decode(pred_original_sample.to(self.weight_dtype)).sample
                     image = (image / 2 + 0.5).clamp(0, 1)
@@ -747,10 +747,10 @@ class Trainer(object):
                             CenterCrop(224),
                             Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
                         ])
-                    
+
                     rm_preprocess = _transform()
                     image = rm_preprocess(image).to(self.accelerator.device)
-                    
+
                     rewards = self.reward_model.score_gard(batch["rm_input_ids"], batch["rm_attention_mask"], image)
                     loss = F.relu(-rewards+2)
                     loss = loss.mean() * args.grad_scale

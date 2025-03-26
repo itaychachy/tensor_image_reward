@@ -1,4 +1,4 @@
-from ImageReward import ReFL
+from TensorImageReward import ReFL
 
 if __name__ == "__main__":
     args = ReFL.parse_args()
